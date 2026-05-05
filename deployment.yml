@@ -1,0 +1,64 @@
+apiVersion: apps/v1              # Kubernetes API version (Deployment এর জন্য standard)
+kind: Deployment                # আমরা একটি Deployment resource তৈরি করছি
+
+metadata:
+  name: nginx-deployment        # Deployment এর unique নাম
+  labels:
+    app: nginx                  # App identify করার জন্য label
+    tier: frontend              # System layer (frontend/backend/db)
+
+spec:
+  replicas: 3                   # মোট 3টা pod চলবে (high availability)
+
+  strategy:
+    type: RollingUpdate         # Zero downtime update strategy
+    rollingUpdate:
+      maxUnavailable: 1         # update এর সময় max 1 pod down থাকতে পারবে
+      maxSurge: 1               # extra 1 pod temporarily create করা যাবে
+
+  selector:
+    matchLabels:
+      app: nginx                # এই label থাকা pod-গুলো Deployment manage করবে
+
+  template:                     # Pod blueprint শুরু
+    metadata:
+      labels:
+        app: nginx              # selector এর সাথে match করতে হবে
+        tier: frontend
+
+    spec:
+      containers:
+        - name: nginx           # Container এর নাম
+          image: nginx:1.25-alpine   # নির্দিষ্ট version (latest না ব্যবহার করাই best practice)
+          imagePullPolicy: IfNotPresent   # local-এ থাকলে আবার pull করবে না
+
+          ports:
+            - containerPort: 80 # container এর ভিতরে nginx port
+
+          resources:
+            requests:
+              cpu: "100m"       # minimum CPU required
+              memory: "128Mi"   # minimum memory required
+            limits:
+              cpu: "300m"       # max CPU limit
+              memory: "256Mi"   # max memory limit
+
+          livenessProbe:        # container alive কিনা check
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10   # start হওয়ার 10s পরে check শুরু
+            periodSeconds: 10         # প্রতি 10s পরপর check
+
+          readinessProbe:       # traffic নেওয়ার জন্য ready কিনা check
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5    # start হওয়ার 5s পরে check
+            periodSeconds: 5          # প্রতি 5s পরপর check
+
+          securityContext:
+            runAsNonRoot: true  # root user হিসেবে run হবে না (security)
+            runAsUser: 101      # নির্দিষ্ট low-privilege user
+
+      restartPolicy: Always     # crash হলে container auto restart
