@@ -1,0 +1,12 @@
+initContainers:
+  - name: wait-db
+    image: busybox
+    command:
+      - sh
+      - -c
+      - |
+        until nc -z mysql-service 3306;
+        do
+          echo "Waiting for DB..."
+          sleep 2
+        done
