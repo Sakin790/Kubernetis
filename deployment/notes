@@ -1,0 +1,6 @@
+পরিবর্তন করতে  →  set image
+ফিরে যেতে      →  rollout undo
+কোথায় আছি     →  describe | grep Image
+ইতিহাস দেখতে  →  rollout history
+
+

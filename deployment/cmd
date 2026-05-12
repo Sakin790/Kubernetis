@@ -1,0 +1,16 @@
+kubectl set image deployment/nginx-deployment nginx=nginx:latest
+ai cmd diye ami image version change korte parbo
+
+
+kubectl rollout undo deployment/nginx-deployment
+ai comand diye ami ager version a jete parbo
+
+
+kubectl describe deployment nginx-deployment | grep Image
+ata diye current image tag check korbo
+
+
+kubectl rollout history deployment/nginx-deployment
+# revision 1 এ যেতে চাই
+kubectl rollout undo deployment/nginx-deployment --to-revision=1
+
