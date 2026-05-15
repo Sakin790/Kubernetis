@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+  namespace: production
+  labels:
+    app: my-app
+    version: "1.0.0"
+spec:
+  replicas: 2                      # HPA এর minReplicas এর সমান রাখো
+  selector:
+    matchLabels:
+      app: my-app
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1                  # একবারে কতটা বেশি pod তুলবে
+      maxUnavailable: 0            # zero downtime — কোনো pod বন্ধ করবে না আগে
+
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      # ─── যে node-এ run করবে ───
+      affinity:
+        podAntiAffinity:           # একই node-এ দুই pod না যাক
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: my-app
+                topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: my-app
+          image: <your-ecr-url>/my-app:1.0.0
+          ports:
+            - containerPort: 3000
+
+          # ─── MUST: resources ছাড়া HPA কাজ করে না ───
+          resources:
+            requests:
+              cpu: "250m"          # HPA এটা দেখেই scale করে
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # ─── Health checks ───
+          readinessProbe:          # traffic পাবে কিনা
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+          livenessProbe:           # restart করবে কিনা
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
+          # ─── Graceful shutdown ───
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+
+      terminationGracePeriodSeconds: 30
